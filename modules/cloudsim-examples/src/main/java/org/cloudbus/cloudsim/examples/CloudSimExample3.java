@@ -135,6 +135,9 @@ public class CloudSimExample3 {
 			broker.bindCloudletToVm(cloudlet1.getCloudletId(), vm1.getId());
 			broker.bindCloudletToVm(cloudlet2.getCloudletId(), vm2.getId());
 
+			// Optimize Cloudlet distribution to VMs using the optimizador method
+			optimizador(broker, vmlist, cloudletList);
+
 			// Sixth step: Starts the simulation
 			CloudSim.startSimulation();
 
@@ -163,32 +166,37 @@ public class CloudSimExample3 {
 	 */
 
 	private static void optimizador(DatacenterBroker broker, List<Vm> vms, List<Cloudlet> tareas) {
-		// Ordenar las VMs por MIPS descendente para priorizar VMs más rápidas
+		// Ordenar VMs por capacidad (MIPS)
 		vms.sort((vm1, vm2) -> Double.compare(vm2.getMips() * vm2.getNumberOfPes(),
 				vm1.getMips() * vm1.getNumberOfPes()));
 
-		// Asignación de tareas a VMs de manera balanceada
 		for (Cloudlet tarea : tareas) {
 			Vm mejorVm = null;
 			double menorCarga = Double.MAX_VALUE;
 
 			for (Vm vm : vms) {
-				// Calcular la carga actual de la VM
+				// Calcular carga actual de la VM
 				double cargaVm = broker.getCloudletList().stream()
 						.filter(c -> c.getVmId() == vm.getId())
 						.mapToDouble(Cloudlet::getCloudletLength)
 						.sum();
 
-				// Seleccionar la VM con menor carga
 				if (cargaVm < menorCarga) {
 					menorCarga = cargaVm;
 					mejorVm = vm;
 				}
 			}
 
-			// Vincular el cloudlet a la VM con menor carga
 			if (mejorVm != null) {
-				broker.bindCloudletToVm(tarea.getCloudletId(), mejorVm.getId());
+				// Asegurarse de que el Cloudlet y la VM existen
+				if (broker.getCloudletList().contains(tarea) && vms.contains(mejorVm)) {
+					broker.bindCloudletToVm(tarea.getCloudletId(), mejorVm.getId());
+					System.out.println("Tarea " + tarea.getCloudletId() + " asignada a VM " + mejorVm.getId()
+							+ " con carga actual de " + menorCarga);
+				} else {
+					System.out
+							.println("Error: La tarea o la VM no se encontraron. No se puede realizar la asignación.");
+				}
 			}
 		}
 	}
